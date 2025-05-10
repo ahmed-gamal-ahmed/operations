@@ -1,419 +1,825 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تتبع الشحنات</title>
-    
-    <!-- إضافة متطلبات PWA -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4CAF50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="تتبع الشحنات">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Scanner</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css"
+    />
+    <link rel="manifest" href="/manifest.json">
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
+      .highlight-column {
+        font-weight: bold;
+        font-size: 1.2rem;
+      }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
+      /* Sidebar styles */
+      #sidebar {
+        height: 100%;
+        width: 250px;
+        position: fixed;
+        top: 0;
+        left: -250px;
+        background-color: #343a40;
+        color: white;
+        padding: 20px;
+        transition: 0.3s;
+      }
 
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: right;
-        }
+      #sidebar a {
+        color: white;
+        text-decoration: none;
+        display: block;
+        margin: 10px 0;
+      }
 
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
+      #sidebar .btn {
+        width: 100%;
+        margin: 10px 0;
+      }
 
-        input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
+      #openSidebarButton {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background-color: #343a40;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        font-size: 18px;
+        cursor: pointer;
+      }
 
-        .dashboard {
-            margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ccc;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+      #sidebar.open {
+        left: 0;
+      }
 
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: 0.3s;
-            margin: 5px;
-        }
+      body {
+        margin-left: 0;
+        transition: margin-left 0.3s;
+      }
 
-        .toggle-btn { background-color: #2196F3; color: white; }
-        .add-btn { background-color: #4CAF50; color: white; }
-        .export-btn { background-color: #9C27B0; color: white; }
-        
-        /* تحسين مظهر الإدخال عند التركيز */
-        input:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 4px rgba(76, 175, 80, 0.5);
-        }
-        
-        /* تحسينات لدعم الأجهزة المحمولة */
-        @media (max-width: 767px) {
-            body {
-                margin: 10px;
-                font-size: 14px;
-            }
-            
-            h1 {
-                font-size: 1.5rem;
-            }
-            
-            button {
-                padding: 8px 12px;
-                font-size: 0.9rem;
-                width: 100%;
-                margin: 5px 0;
-            }
-            
-            th, td {
-                padding: 8px;
-            }
-            
-            /* عرض طولي للجدول في الأجهزة الصغيرة */
-            table, thead, tbody, th, td, tr {
-                display: block;
-            }
-            
-            thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
-            
-            tr {
-                margin-bottom: 15px;
-                border: 1px solid #ddd;
-            }
-            
-            td {
-                position: relative;
-                padding-right: 50%;
-                text-align: right;
-                border: none;
-                border-bottom: 1px solid #eee;
-            }
-            
-            td:before {
-                position: absolute;
-                right: 6px;
-                width: 45%;
-                white-space: nowrap;
-                font-weight: bold;
-            }
-            
-            td:nth-of-type(1):before { content: "📦 الشحنة"; }
-            td:nth-of-type(2):before { content: "👤 السائق"; }
-            td:nth-of-type(3):before { content: "🍏 مركز الأغذية"; }
-            td:nth-of-type(4):before { content: "📦 مركز غير الأغذية"; }
-            td:nth-of-type(5):before { content: "🏭 مركز 3"; }
-        }
+      body.sidebar-open {
+        margin-left: 250px;
+      }
 
-        /* إضافة أزرار ثابتة أسفل الشاشة للأجهزة المحمولة */
-        .mobile-actions {
-            display: none;
-        }
-        
-        @media (max-width: 767px) {
-            .mobile-actions {
-                display: flex;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: #fff;
-                box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-                padding: 10px;
-                z-index: 1000;
-            }
-            
-            .mobile-actions button {
-                flex: 1;
-                margin: 0 5px;
-            }
-            
-            /* إضافة مساحة أسفل الصفحة حتى لا تتداخل مع الأزرار الثابتة */
-            body {
-                padding-bottom: 70px;
-            }
-        }
+      .sidebar {
+        width: 250px;
+        height: 100vh;
+        overflow-y: auto;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background-color: #f4f4f4;
+        padding: 20px;
+      }
+
+      .sidebar .item {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .sidebar::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .sidebar::-webkit-scrollbar-thumb {
+        background-color: darkgray;
+        border-radius: 4px;
+      }
+
+      .sidebar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+
+      #barcodeInputContainer.fixed-bottom {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: white;
+        padding: 10px;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        z-index: 1050; /* Ensure it is above the sidebar */
+      }
+      body.sidebar-open #barcodeInputContainer.fixed-bottom {
+        left: 250px; /* Adjust for sidebar width */
+      }
+
+      #installButton {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: none;
+        z-index: 1050;
+      }
+
+      /* Admin Dashboard styles */
+      #adminDashboard {
+        display: none;
+        padding: 20px;
+      }
+
+      /* Login and Signup styles */
+      #loginContainer, #signupContainer {
+        display: none;
+        padding: 20px;
+      }
+
+      /* Hide main content until login */
+      #mainContent {
+        display: none;
+      }
+
+      /* Additional styling to hide/show sections */
+      #loginContainer, #signupContainer, #mainContent {
+        display: none;
+      }
+      /* Initially, only login is visible */
+      #loginContainer.active {
+        display: block;
+      }
+      #signupContainer.active {
+        display: block;
+      }
+      #mainContent.active {
+        display: block;
+      }
+
+      /* Password Modal styles */
+      #passwordModal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
+      #passwordModalContent {
+        background: white;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center;
+      }
     </style>
-    <script>
-        // تسجيل Service Worker للدعم بدون اتصال
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('تم تسجيل Service Worker بنجاح'))
-                .catch(err => console.error('خطأ في تسجيل Service Worker:', err));
-            });
-        }
-    </script>
-</head>
-<body>
-    <h1>🐪 نظام تتبع الشحنات</h1>
-    
-    <button class="toggle-btn" onclick="toggleDashboard()">📊 فتح لوحة التحكم</button>
-    
-    <div class="dashboard" id="dashboard" style="display: none;">
-        <h2>⚙️ إعدادات النظام</h2>
-        
-        <p>أدخل البيانات مباشرة في الجدول. يتم حفظ التغييرات تلقائيًا.</p>
-        
-        <button onclick="clearAllData()" style="background-color: #f44336; color: white;">
-            🗑️ حذف كل البيانات
-        </button>
+    <script async defer src="https://apis.google.com/js/api.js"></script>
+  </head>
+
+  <body class="bg-light">
+    <!-- Main Content -->
+    <div id="mainContent">
+      <!-- Admin Dashboard -->
+      <div id="adminDashboard">
+        <h2>Admin Dashboard</h2>
+        <p>Welcome, Admin!</p>
+        <!-- Add more admin-specific content here -->
+      </div>
+
+      <!-- Main Content -->
+      <div id="contentSection">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar">
+          <div class="mb-3">
+            <label for="fileInput" class="form-label">Upload Excel File</label>
+            <input type="file" id="fileInput" class="form-control" />
+          </div>
+          <button id="toggleRemainingButton" class="btn btn-primary">
+            Hide Remaining Products
+          </button>
+          <button id="clearStorageButton" class="btn btn-danger">
+            Clear Local Storage
+          </button>
+          <button id="exportButton" class="btn btn-success">
+            Export Scanned Products
+          </button>
+          <div class="mb-3">
+            <h4 class="text-center">Edit Barcodes</h4>
+            <div class="input-group mb-3">
+              <input
+                type="text"
+                id="barcodeEditInput"
+                class="form-control"
+                placeholder="Enter Edited Barcode"
+              />
+              <input
+                type="text"
+                id="editedBarcodeInput"
+                class="form-control"
+                placeholder="Enter Original Barcode"
+              />
+              <button id="saveEditedBarcodeButton" class="btn btn-primary">
+                Save
+              </button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <h4 class="text-center">Column Visibility</h4>
+            <div id="columnToggleButtons" class="d-flex flex-wrap justify-content-center gap-2"></div>
+          </div>
+          <div class="mb-3">
+            <h4 class="text-center">Mobile Mode</h4>
+            <button id="toggleMobileModeButton" class="btn btn-info">Enable Mobile Mode</button>
+          </div>
+        </div>
+
+        <!-- Open Sidebar Button -->
+        <button id="openSidebarButton">☰</button>
+
+        <div class="container mt-5">
+          <h1 class="text-center" id="pageHeader">Product Inventory</h1>
+
+          <div class="mb-3" id="barcodeInputContainer">
+            <label for="barcodeInput" class="form-label">Enter Barcode</label>
+            <input
+              type="text"
+              id="barcodeInput"
+              class="form-control"
+              placeholder="Enter Barcode"
+            />
+          </div>
+          <h3 class="text-center">Scanned Products</h3>
+          <table class="table table-bordered table-striped mt-3">
+            <thead class="table-dark">
+              <tr id="tableHeaders"></tr>
+            </thead>
+            <tbody id="productTableBody"></tbody>
+          </table>
+          <div id="remainingProductsSection" class="mt-5">
+            <h3 class="text-center">Remaining Products</h3>
+            <table id="remainingProductsTable" class="table table-bordered table-striped mt-3">
+              <thead class="table-dark">
+                <tr id="remainingTableHeaders"></tr>
+              </thead>
+              <tbody id="remainingTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <button id="installButton" class="btn btn-primary">Install App</button>
+      </div>
     </div>
 
-    <table id="trackingTable">
-        <thead>
-            <tr>
-                <th>📦 الشحنة</th>
-                <th>👤 السائق</th>
-                <th>🍏 مخزن الأغذية</th>
-                <th>📦 مخزن غير الأغذية</th>
-                <th>🏭 مخزن 3</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            <!-- البيانات تضاف ديناميكيًا -->
-        </tbody>
-    </table>
-    
-    <div style="margin-top: 20px;">
-        <button class="add-btn" onclick="addNewRow()">➕ صف جديد</button>
-        <button class="export-btn" onclick="exportToExcel()">📤 تصدير للإكسل</button>
-    </div>
-    
-    <!-- أزرار ثابتة للأجهزة المحمولة -->
-    <div class="mobile-actions">
-        <button class="add-btn" onclick="addNewRow()">➕</button>
-        <button class="toggle-btn" onclick="toggleDashboard()">⚙️</button>
-        <button class="export-btn" onclick="exportToExcel()">📤</button>
-    </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // تهيئة التطبيق
-        document.addEventListener('DOMContentLoaded', () => {
-            loadFromLocalStorage();
-            if (!document.getElementById('tableBody').children.length) {
-                addNewRow();
+      let excelData = [];
+      const scannedBarcodes = new Map();
+      let remainingProducts = [];
+      let fileName = "Product Inventory"; // Default file name
+      let focusEnabled = true; // State variable to track focus mode
+      let hiddenColumns = []; // Track hidden columns
+      let editedBarcodes = new Map(); // Store edited barcodes
+
+      // Load edited barcodes from database
+      function loadEditedBarcodes() {
+        fetch('get_edited_barcodes.php')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
             }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success && data.edited_barcodes) {
+              editedBarcodes = new Map(data.edited_barcodes);
+            }
+          })
+          .catch(error => {
+            console.error('Error loading edited barcodes:', error);
+          });
+      }
+
+      // Save edited barcodes to database
+      function saveEditedBarcodes() {
+        fetch('save_edited_barcodes.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            edited_barcodes: Array.from(editedBarcodes.entries())
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            console.error('Error saving edited barcodes:', data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Cache frequently accessed elements
+        const mainContent = document.getElementById("mainContent");
+        const barcodeInput = document.getElementById("barcodeInput");
+        const fileInput = document.getElementById("fileInput");
+        const toggleRemainingButton = document.getElementById("toggleRemainingButton");
+        const clearStorageButton = document.getElementById("clearStorageButton");
+        const exportButton = document.getElementById("exportButton");
+        const saveEditedBarcodeButton = document.getElementById("saveEditedBarcodeButton");
+        const openSidebarButton = document.getElementById("openSidebarButton");
+        const sidebar = document.getElementById("sidebar");
+        const toggleMobileModeButton = document.getElementById("toggleMobileModeButton");
+        const barcodeInputContainer = document.getElementById("barcodeInputContainer");
+        
+        // Directly show main content
+        mainContent.style.display = "block";
+        
+        // Set up event listeners using cached nodes
+        
+        // Listen for Enter key and focus on barcodeInput if not active
+        document.addEventListener("keypress", (event) => {
+          if (event.key === "Enter" && document.activeElement !== barcodeInput) {
+            event.preventDefault();
+            barcodeInput.focus();
+          }
+        });
+        
+        // File upload event
+        fileInput.addEventListener("change", handleFileUpload);
+        
+        // Barcode search
+        barcodeInput.addEventListener("keypress", function (event) {
+          if (event.key === "Enter") {
+            handleBarcodeSearch(event);
+          }
+        });
+        
+        toggleRemainingButton.addEventListener("click", toggleRemainingProducts);
+        clearStorageButton.addEventListener("click", clearScannedProducts);
+        exportButton.addEventListener("click", exportScannedProducts);
+        
+        saveEditedBarcodeButton.addEventListener("click", () => {
+          const editedBarcode = document.getElementById("barcodeEditInput").value.trim();
+          const originalBarcode = document.getElementById("editedBarcodeInput").value.trim();
+          if (editedBarcode && originalBarcode) {
+            editedBarcodes.set(editedBarcode, originalBarcode);
+            saveEditedBarcodes();
+            alert("Barcode edited and saved!");
+          } else {
+            alert("Please enter both the edited and original barcodes.");
+          }
+        });
+        
+        openSidebarButton.addEventListener("click", () => {
+          sidebar.classList.toggle("open");
+          document.body.classList.toggle("sidebar-open");
+        });
+        
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            sidebar.classList.toggle("open");
+            document.body.classList.toggle("sidebar-open");
+          }
+        });
+        
+        // Toggle mobile mode using cached elements
+        toggleMobileModeButton.addEventListener("click", () => {
+          barcodeInputContainer.classList.toggle("fixed-bottom");
+          if (barcodeInputContainer.classList.contains("fixed-bottom")) {
+            toggleMobileModeButton.textContent = "Disable Mobile Mode";
+          } else {
+            toggleMobileModeButton.textContent = "Enable Mobile Mode";
+          }
+        });
+        
+        // Load edited barcodes and previous progress
+        loadEditedBarcodes();
+        loadProgress();
+      });
+
+      function toggleColumnVisibility(columnIndex) {
+        const tables = [
+          document.getElementById("productTableBody"),
+          document.getElementById("remainingTableBody"),
+        ];
+        const headers = [
+          document.getElementById("tableHeaders"),
+          document.getElementById("remainingTableHeaders"),
+        ];
+
+        tables.forEach((table) => {
+          Array.from(table.rows).forEach((row) => {
+            if (row.cells[columnIndex]) {
+              row.cells[columnIndex].classList.toggle("d-none");
+            }
+          });
         });
 
-        // دالة التبديل بين فتح/إغلاق لوحة التحكم
-        function toggleDashboard() {
-            const dashboard = document.getElementById('dashboard');
-            dashboard.style.display = dashboard.style.display === 'none' ? 'block' : 'none';
-            document.querySelector('.toggle-btn').textContent = 
-                dashboard.style.display === 'none' ? '📊 فتح لوحة التحكم' : '✖️ إغلاق لوحة التحكم';
+        headers.forEach((headerRow) => {
+          if (headerRow.cells[columnIndex]) {
+            headerRow.cells[columnIndex].classList.toggle("d-none");
+          }
+        });
+
+        // Update the hidden columns array
+        if (hiddenColumns.includes(columnIndex)) {
+          hiddenColumns = hiddenColumns.filter(
+            (index) => index !== columnIndex
+          );
+        } else {
+          hiddenColumns.push(columnIndex);
+        }
+      }
+
+      function applyHiddenColumns(row) {
+        hiddenColumns.forEach((columnIndex) => {
+          if (row.cells[columnIndex]) {
+            row.cells[columnIndex].classList.add("d-none");
+          }
+        });
+      }
+
+      function handleBarcodeSearch(event) {
+        let barcode = event.target.value.trim();
+
+        if (barcode === "") return;
+
+        console.log("Entered barcode:", barcode);
+
+        // Check if the barcode is an edited barcode
+        if (editedBarcodes.has(barcode)) {
+          barcode = editedBarcodes.get(barcode); // Replace with the original barcode
+          console.log("Original barcode:", barcode);
         }
 
-        // إضافة صف جديد
-        function addNewRow() {
-            const tbody = document.getElementById('tableBody');
-            const newRow = document.createElement('tr');
-            
-            newRow.innerHTML = `
-                <td><input type="text" class="shipment-input" placeholder="رقم الشحنة"></td>
-                <td><input type="text" class="driver-input" placeholder="اسم السائق"></td>
-                <td><input type="text" class="scanner-input" placeholder="ماسح ضوئي"></td>
-                <td><input type="text" class="scanner-input" placeholder="ماسح ضوئي"></td>
-                <td><input type="text" class="scanner-input" placeholder="ماسح ضوئي"></td>
-            `;
-            
-            // إضافة مستمع الأحداث للحقول الجديدة
-            const inputs = newRow.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.addEventListener('input', saveToLocalStorage);
-            });
-            
-            tbody.appendChild(newRow);
-            
-            // التركيز على حقل الإدخال الأول في الصف الجديد
-            newRow.querySelector('input').focus();
-            
-            saveToLocalStorage();
-            return newRow;
+        // Check if the barcode is already scanned
+        if (scannedBarcodes.has(barcode)) {
+          const row = scannedBarcodes.get(barcode);
+          row.classList.add("bg-warning");
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => {
+            row.classList.remove("bg-warning");
+          }, 1000);
+        } else {
+          // Search for the barcode in the remaining products
+          const rowIndex = remainingProducts.findIndex((row) =>
+            row.some((cell) =>
+              cell
+                .toString()
+                .split("-")
+                .map((c) => c.trim())
+                .includes(barcode)
+            )
+          );
+
+          console.log("Row index found:", rowIndex);
+
+          if (rowIndex >= 0) {
+            const productRow = remainingProducts[rowIndex];
+            addRowToScannedTable(productRow, barcode);
+            remainingProducts.splice(rowIndex, 1);
+            showRemainingProducts();
+          } else {
+            alert("Barcode not found!");
+          }
         }
 
-        // التصدير للإكسل - نسخة محسنة مع تنسيقات
-        function exportToExcel() {
-            // إنشاء مصنف جديد
+        event.target.value = ""; // Clear the input field
+      }
+
+      function addRowToScannedTable(row, barcode) {
+        const tableBody = document.getElementById("productTableBody");
+        const tr = document.createElement("tr");
+        tr.dataset.barcode = barcode;
+
+        row.forEach((cell, index) => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+
+          if (index === 2) {
+            td.classList.add("highlight-column");
+          }
+
+          tr.appendChild(td);
+        });
+
+        // Apply hidden columns to the new row
+        applyHiddenColumns(tr);
+
+        tableBody.appendChild(tr);
+
+        if (focusEnabled) {
+          tr.scrollIntoView({ behavior: "smooth", block: "center" });
+          tr.classList.add("bg-success");
+          setTimeout(() => {
+            tr.classList.remove("bg-success");
+          }, 1000);
+        }
+
+        scannedBarcodes.set(barcode, tr);
+
+        // Save scanned product to database
+        fetch('save_scanned.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            barcode: barcode,
+            product_data: row
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            console.error('Error saving scanned product:', data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+      }
+
+      function toggleRemainingProducts() {
+        const remainingSection = document.getElementById(
+          "remainingProductsSection"
+        );
+        const button = document.getElementById("toggleRemainingButton");
+
+        if (remainingSection.classList.contains("d-none")) {
+          remainingSection.classList.remove("d-none");
+          button.textContent = "Hide Remaining Products";
+        } else {
+          remainingSection.classList.add("d-none");
+          button.textContent = "Show Remaining Products";
+        }
+      }
+
+      function showRemainingProducts() {
+        const remainingTableBody = document.getElementById("remainingTableBody");
+        remainingTableBody.innerHTML = "";
+
+        remainingProducts.forEach((row) => {
+          const tr = document.createElement("tr");
+          row.forEach((cell, i) => {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            if (i === 2) {
+              td.classList.add("highlight-column");
+            }
+            tr.appendChild(td);
+          });
+
+          // Apply hidden columns to the new row
+          applyHiddenColumns(tr);
+          remainingTableBody.appendChild(tr);
+        });
+      }
+
+      function loadProgress() {
+        // Load products from database
+        fetch('get_products.php')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success && data.products && data.products.length > 0) {
+              excelData = [data.products[0].data]; // Headers
+              remainingProducts = data.products.map(p => p.data);
+              
+              // Load scanned products
+              return fetch('get_scanned.php');
+            } else {
+              console.log('No products found or invalid data format');
+              return Promise.reject('No products found');
+            }
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success && data.scanned_products) {
+              data.scanned_products.forEach(product => {
+                addRowToScannedTable(product.data, product.barcode);
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error loading data:', error);
+          });
+
+        renderTableHeaders();
+        showRemainingProducts();
+      }
+
+      function clearScannedProducts() {
+        const confirmation = confirm(
+          "Are you sure you want to clear all scanned products?"
+        );
+        if (confirmation) {
+          fetch('clear_scanned.php', {
+            method: 'POST'
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              scannedBarcodes.clear();
+              document.getElementById('productTableBody').innerHTML = '';
+              loadProgress(); // Reload remaining products
+            } else {
+              console.error('Error clearing scanned products:', data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+        }
+      }
+
+      function exportScannedProducts() {
+        const scannerName = prompt("Please enter the scanner's name:");
+        if (!scannerName) {
+          alert("Scanner name is required!");
+          return;
+        }
+
+        fetch('export_scanned.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            scanner_name: scannerName
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Create and download the Excel file
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet([getHeaders(), ...getData()]);
-            
-            // تعريف التنسيقات
-            const headerStyle = {
-                font: { sz: 14, bold: true, color: { rgb: "FFFFFF" } },
-                fill: { fgColor: { rgb: "0070C0" } }, // أزرق داكن
-                alignment: { horizontal: "center" },
-                border: {
-                    top: { style: "thin", color: { rgb: "000000" } },
-                    bottom: { style: "thin", color: { rgb: "000000" } },
-                    left: { style: "thin", color: { rgb: "000000" } },
-                    right: { style: "thin", color: { rgb: "000000" } }
-                }
-            };
-
-            const dataStyle = {
-                font: { sz: 12 },
-                fill: { fgColor: { rgb: "C6EFCE" } }, // أخضر فاتح
-                alignment: { horizontal: "right" },
-                border: {
-                    top: { style: "thin", color: { rgb: "000000" } },
-                    bottom: { style: "thin", color: { rgb: "000000" } },
-                    left: { style: "thin", color: { rgb: "000000" } },
-                    right: { style: "thin", color: { rgb: "000000" } }
-                }
-            };
-
-            // تطبيق التنسيقات على الخلايا
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            for(let R = range.s.r; R <= range.e.r; ++R) {
-                for(let C = range.s.c; C <= range.e.c; ++C) {
-                    const cell_address = {c:C, r:R};
-                    const cell_ref = XLSX.utils.encode_cell(cell_address);
-                    
-                    if(R === 0) { // تنسيق العناوين
-                        if (!ws[cell_ref].s) ws[cell_ref].s = {};
-                        ws[cell_ref].s = headerStyle;
-                    } else { // تنسيق البيانات
-                        if (!ws[cell_ref].s) ws[cell_ref].s = {};
-                        ws[cell_ref].s = dataStyle;
-                    }
-                }
-            }
-
-            // إعدادات عامة للورقة
-            ws['!cols'] = Array(5).fill({ wch: 25 }); // عرض الأعمدة
-            ws['!rows'] = [{ hpx: 30 }]; // ارتفاع صف العناوين
-
-            // إضافة الورقة إلى المصنف
-            XLSX.utils.book_append_sheet(wb, ws, "الشحنات");
-            
-            // حفظ الملف
-            XLSX.writeFile(wb, `تقرير_الشحنات_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
-        }
-
-        // دالة مساعدة للحصول على العناوين
-        function getHeaders() {
-            return ['الشحنة', 'السائق', 'مركز الأغذية', 'مركز غير الأغذية', 'مركز 3'];
-        }
-
-        // دالة مساعدة للحصول على البيانات
-        function getData() {
-            return Array.from(document.querySelectorAll('#tableBody tr')).map(row => 
-                Array.from(row.querySelectorAll('input')).map(input => input.value)
-            );
-        }
-
-        // التخزين المحلي
-        function saveToLocalStorage() {
-            const data = Array.from(document.querySelectorAll('#tableBody tr')).map(row => 
-                Array.from(row.querySelectorAll('input')).map(input => input.value)
-            );
-            localStorage.setItem('shipmentDataSimple', JSON.stringify(data));
-        }
-
-        function loadFromLocalStorage() {
-            try {
-                const savedData = JSON.parse(localStorage.getItem('shipmentDataSimple'));
-                if (savedData && savedData.length > 0) {
-                    document.getElementById('tableBody').innerHTML = '';
-                    
-                    savedData.forEach(row => {
-                        const newRow = addNewRow();
-                        const inputs = newRow.querySelectorAll('input');
-                        
-                        // تعيين قيم الحقول من البيانات المحفوظة
-                        inputs.forEach((input, index) => {
-                            if (row[index]) {
-                                input.value = row[index];
-                            }
-                        });
-                    });
-                }
-            } catch (error) {
-                console.error("خطأ في تحميل البيانات:", error);
-            }
-        }
-
-        // حذف جميع البيانات
-        function clearAllData() {
-            if (confirm('هل أنت متأكد من حذف كل البيانات؟')) {
-                document.getElementById('tableBody').innerHTML = '';
-                localStorage.removeItem('shipmentDataSimple');
-                addNewRow();
-            }
-        }
-
-        // الحفظ التلقائي عند التعديل
-        document.getElementById('tableBody').addEventListener('input', saveToLocalStorage);
-        
-        // إضافة وظيفة للتحقق من تثبيت التطبيق
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // منع ظهور المطالبة التلقائية
-            e.preventDefault();
-            // تخزين الحدث للاستخدام لاحقًا
-            deferredPrompt = e;
-            
-            // إضافة زر للتثبيت إذا لم يكن التطبيق مثبتًا بالفعل
-            const installButton = document.createElement('button');
-            installButton.innerHTML = '📱 تثبيت التطبيق';
-            installButton.style.backgroundColor = '#FF9800';
-            installButton.style.color = 'white';
-            installButton.style.margin = '10px 0';
-            installButton.style.display = 'block';
-            installButton.style.width = '100%';
-            
-            installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    // إظهار مربع حوار التثبيت
-                    deferredPrompt.prompt();
-                    // انتظار اختيار المستخدم
-                    const { outcome } = await deferredPrompt.userChoice;
-                    // إعادة ضبط المتغير
-                    deferredPrompt = null;
-                    // إزالة الزر إذا تم التثبيت أو الرفض
-                    installButton.style.display = 'none';
-                }
-            });
-            
-            // إضافة الزر للوحة التحكم
-            const dashboard = document.getElementById('dashboard');
-            dashboard.insertBefore(installButton, dashboard.firstChild);
+            const ws = XLSX.utils.aoa_to_sheet(data.products);
+            XLSX.utils.book_append_sheet(wb, ws, "Scanned Products");
+            const date = new Date().toISOString().slice(0, 10);
+            const exportFileName = `${fileName}_scanned_products_${date}.xlsx`;
+            XLSX.writeFile(wb, exportFileName);
+          } else {
+            console.error('Error exporting products:', data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
         });
+      }
+
+      function renderTableHeaders() {
+        if (!excelData || !excelData[0]) {
+          console.log('No headers available');
+          return;
+        }
+
+        const headers = excelData[0];
+        const tableHeaders = document.getElementById("tableHeaders");
+        const remainingTableHeaders = document.getElementById("remainingTableHeaders");
+        const columnToggleButtons = document.getElementById("columnToggleButtons");
+
+        if (!tableHeaders || !remainingTableHeaders || !columnToggleButtons) {
+          console.error('Required DOM elements not found');
+          return;
+        }
+
+        tableHeaders.innerHTML = "";
+        remainingTableHeaders.innerHTML = "";
+        columnToggleButtons.innerHTML = "";
+
+        headers.forEach((header, index) => {
+          // Add header cells to both tables
+          const th = document.createElement("th");
+          th.textContent = header;
+          tableHeaders.appendChild(th);
+
+          const thRemaining = document.createElement("th");
+          thRemaining.textContent = header;
+          remainingTableHeaders.appendChild(thRemaining);
+
+          // Create toggle buttons for columns
+          const button = document.createElement("button");
+          button.textContent = `Toggle ${header}`;
+          button.className = "btn btn-secondary btn-sm";
+          button.addEventListener("click", () => toggleColumnVisibility(index));
+          columnToggleButtons.appendChild(button);
+        });
+      }
+
+      // Add keyboard navigation
+      document.addEventListener('keydown', (event) => {
+        const key = event.key.toLowerCase();
+        if (key.length === 1 && key >= 'a' && key <= 'z') {
+          const products = Array.from(document.querySelectorAll('#remainingProductsTable tbody tr'));
+          const matchingProduct = products.find(tr => 
+            tr.querySelector('td:nth-child(2)').textContent.toLowerCase().startsWith(key)
+          );
+          
+          if (matchingProduct) {
+            matchingProduct.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            matchingProduct.classList.add('highlight-key-match');
+            setTimeout(() => matchingProduct.classList.remove('highlight-key-match'), 1000);
+          }
+        }
+      });
+
+      let deferredPrompt;
+      const installButton = document.getElementById('installButton');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installButton.style.display = 'block';
+      });
+
+      installButton.addEventListener('click', async () => {
+        installButton.style.display = 'none';
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        deferredPrompt = null;
+      });
+
+      window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+      });
+
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful');
+            })
+            .catch(err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+
+      function handleFileUpload(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+
+        // Update page header with the Excel file name
+        fileName = file.name;
+        document.getElementById("pageHeader").textContent = fileName;
+
+        reader.onload = (e) => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          excelData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          remainingProducts = [...excelData.slice(1)];
+
+          // Save products to database
+          const products = remainingProducts.map(row => {
+            const barcode = row[0]; // Assuming barcode is in first column
+            return {
+              barcode: barcode,
+              data: row
+            };
+          });
+
+          fetch('save_products.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ products: products })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              console.log('Products saved to database');
+            } else {
+              console.error('Error saving products:', data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+
+          renderTableHeaders();
+          showRemainingProducts();
+        };
+
+        reader.readAsArrayBuffer(file);
+      }
     </script>
-</body>
+  </body>
 </html>

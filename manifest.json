@@ -1,26 +1,21 @@
 {
-  "name": "نظام تتبع الشحنات",
-  "short_name": "تتبع الشحنات",
-  "description": "تطبيق لتتبع الشحنات وإدارة البيانات",
-  "start_url": "./index.html",
+  "name": "Product Scanner",
+  "short_name": "Scanner",
+  "description": "A product scanning application",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4CAF50",
-  "orientation": "any",
-  "dir": "rtl",
-  "lang": "ar",
+  "theme_color": "#343a40",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
